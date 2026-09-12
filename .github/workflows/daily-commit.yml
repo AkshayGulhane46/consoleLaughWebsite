@@ -1,29 +1,56 @@
-name: Daily Contribution
+name: Daily Repository Maintenance
 
 on:
   schedule:
+    # Runs every day at 10:00 PM IST
     - cron: "30 16 * * *"
+
+  # Allows you to run it manually
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  daily-commit:
+  daily-maintenance:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update daily activity
+      - name: Update activity log
         run: |
-          echo "Last updated: $(date -u)" > daily-activity.txt
+          mkdir -p .github/activity
+
+          DATE=$(date -u '+%Y-%m-%d')
+          TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          cat > ".github/activity/$DATE.md" << EOF
+          # Repository Maintenance - $DATE
+
+          Automated repository maintenance completed.
+
+          Last updated: $TIME
+          EOF
+
+      - name: Update README
+        run: |
+          DATE=$(date -u '+%Y-%m-%d')
+
+          echo "" >> README.md
+          echo "<!-- Last automated maintenance: $DATE -->" >> README.md
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add daily-activity.txt
-          git commit -m "Daily contribution $(date -u '+%Y-%m-%d')" || echo "No changes to commit"
-          git push
+
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: daily repository maintenance"
+            git push
+          fi
